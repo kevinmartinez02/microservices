@@ -1,0 +1,116 @@
+services: 
+  db_api:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mfa_api
+      POSTGRES_USER: mfa
+    ports:
+      - 5433:5432
+    expose:
+      - 5432
+    volumes:
+      - ./postgres_data/api:/var/lib/postgresql/data
+
+  db_products:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mfa_products
+      POSTGRES_USER: mfa
+    ports:
+      - 5434:5432
+    expose:
+      - 5432
+    volumes:
+      - ./postgres_data/products:/var/lib/postgresql/data
+
+  db_shopping:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mfa_shopping
+      POSTGRES_USER: mfa
+    ports:
+      - 5435:5432
+    expose:
+      - 5432
+    volumes:
+      - ./postgres_data/shopping:/var/lib/postgresql/data
+  
+  api:
+    command: sh -c "pnpm install -r && npx prisma generate && npx prisma migrate deploy && pnpm start:dev"
+    build: 
+      context: api
+      dockerfile: Dockerfile
+    ports:
+      - 4000:4000
+    expose:
+      - 4000
+    depends_on:
+      - db_api
+      - products
+      - shopping
+    volumes:
+      - ./api:/app
+    environment:
+      DATABASE_URL: postgresql://mfa:password@db_api:5432/mfa_api
+      PRODUCTS_HOST: products
+      PRODUCTS_GRPC_PORT: 50051
+      SHOPPING_HOST: shopping
+      SHOPPING_GRPC_PORT: 50052
+  
+  frontend:
+    command: sh -c "pnpm install && pnpm dev"
+    build: 
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    expose:
+      - 3000
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+
+  products:
+    command: sh -c "pnpm install && npx prisma generate && npx prisma db push && pnpm exec node prisma/seed.cjs && pnpm start:dev"
+    build:
+      context: products
+      dockerfile: Dockerfile
+    ports:
+      - 3101:3101
+      - 50051:50051
+    expose:
+      - 50051
+    environment:
+      DATABASE_URL: postgresql://mfa:password@db_products:5432/mfa_products
+      PRODUCTS_HOST: 0.0.0.0
+      PRODUCTS_GRPC_PORT: 50051
+    depends_on:
+      - db_products
+    volumes:
+      - ./products:/app
+
+  shopping:
+    command: sh -c "pnpm install && npx prisma generate && npx prisma db push && pnpm start:dev"
+    build:
+      context: shopping
+      dockerfile: Dockerfile
+    ports:
+      - 3102:3102
+      - 50052:50052
+    expose:
+      - 50052
+    environment:
+      DATABASE_URL: postgresql://mfa:password@db_shopping:5432/mfa_shopping
+      SHOPPING_HOST: 0.0.0.0
+      SHOPPING_GRPC_PORT: 50052
+      PRODUCTS_HOST: products
+      PRODUCTS_GRPC_PORT: 50051
+    depends_on:
+      - db_shopping
+      - products
+    volumes:
+      - ./shopping:/app

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package shopping;
+
+message ListRequest {}
+
+message PurchaseItem {
+  int32 id = 1;
+  int32 productId = 2;
+  string name = 3;
+  double price = 4;
+  int32 quantity = 5;
+}
+
+message ListResponse {
+  repeated PurchaseItem items = 1;
+}
+
+message PurchaseRequest {
+  int32 productId = 1;
+  int32 quantity = 2;
+}
+
+message PurchaseResponse {
+  bool success = 1;
+}
+
+service ShoppingService {
+  rpc List (ListRequest) returns (ListResponse);
+  rpc Purchase (PurchaseRequest) returns (PurchaseResponse);
+}
+
+

@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 interface ProductsServiceGrpc {
   List(request: {}): any;
   DecrementStock(request: { productId: number; quantity: number }): any;
-  isThereStock(request: { productId: number }): any;
 }
 
 @Injectable()
@@ -36,11 +35,6 @@ export class ShoppingService implements OnModuleInit {
 
     const target = items.find((p) => p.id === productId);
     if (!target) throw new Error('Product not found');
-
-    const isThereStock = await this.productsService.isThereStock({ productId });
-    if (!isThereStock){
-      console.log('Producto sin stock');
-    };
 
     await firstValueFrom(this.productsService.DecrementStock({ productId, quantity }));
 
